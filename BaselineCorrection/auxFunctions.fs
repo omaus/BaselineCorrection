@@ -127,6 +127,10 @@ module String = // in F#Aux neiballern!
             let mutable i = 0
             while i < str.Length && predicate str.[i] do i <- i + 1
             String.skip i str
+    let allLowerCase str =
+        String.toCharArray str
+        |> Array.map (fun c -> if int c >= 65 && int c <= 90 then int c + 32 |> char else c)
+        |> System.String.Concat
 
 
 module BasicFunction =
