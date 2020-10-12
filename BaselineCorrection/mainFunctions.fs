@@ -7,14 +7,12 @@ open AuxFunctions.BasicFunction
 open AuxFunctions.IO
 
 /// <summary>Takes a trace and determines the baseline based on a given windowsize.</summary>
-/// <param name="windowSize">The size of the window which is used to determine the baseline. If 0, the algorithm iterates through all windowSizes between 5 and 500 and takes the window
-/// with the smallest SD over the windowSize with the smallest SDs. Otherwise, it searches for the window with the smallest SD.</param>
+/// <param name="windowSize">The size of the window which is used to determine the baseline. If 0, the algorithm iterates through all windowSizes between 5 and 500 and takes the window with the smallest SD over the windowSize with the smallest SDs. Otherwise, it searches for the window with the smallest SD.</param>
 /// <param name="trace">The trace which baseline shall be determined.</param>
 /// <returns>The mean of the baseline as the mean of the window with the smallest SD.</returns>
-let determineBaseline windowSize (trace: float []) =
-    if windowSize < 0 then failwith "ERROR: windowSize must be 0 or higher."
-    elif windowSize = 0 then
-        let windowSizes =
+let determineBaseline (windowSizes: int []) (trace: float []) =
+    if windowSizes = [||] then
+        let windowSizesCalc =
             [|5 .. 500|]
             |> Array.map (
                 fun winS ->
@@ -32,7 +30,7 @@ let determineBaseline windowSize (trace: float []) =
             ) 
             |> Async.Parallel 
             |> Async.RunSynchronously
-        windowSizes 
+        windowSizesCalc 
         |> Array.mapi (fun i sD -> i + 5, sD)
         |> Array.minBy snd
         |> fun (winS,sD) ->
@@ -45,20 +43,43 @@ let determineBaseline windowSize (trace: float []) =
                 printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
                 baseline
     else
-        Array.windowed windowSize trace
-        |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
-        |> Array.sortBy (fun (i,mean,sD) -> sD)
-        |> Array.item 0
-        |> fun (fstFrame,baseline,sd) ->
-            printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + windowSize) sd baseline
-            baseline
+        let windowSizesCalc =
+            windowSizes
+            |> Array.map (
+                fun winS ->
+                    async {
+                        // printfn "Calculating window size %i" winS
+                        return (
+                            Array.windowed winS trace
+                            |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
+                            |> Array.sortBy (fun (i,mean,sD) -> sD)
+                            |> Array.take 10
+                            |> Array.map (fun (i,mean,sD) -> mean)
+                            |> Seq.stDev
+                        )
+                    }
+            ) 
+            |> Async.Parallel 
+            |> Async.RunSynchronously
+        windowSizesCalc 
+        |> Array.mapi (fun i sD -> i + 5, sD)
+        |> Array.minBy snd
+        |> fun (winS,sD) ->
+            printfn "Optimal window size is %i with an SD of %f" winS sD
+            Array.windowed winS trace
+            |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
+            |> Array.sortBy (fun (i,mean,sD) -> sD)
+            |> Array.item 0
+            |> fun (fstFrame,baseline,sd) ->
+                printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
+                baseline
 
 /// <summary>Takes an array of suite2p trace, determines for each trace a window which resembles the baseline of the fluorescence trace, and subtracts all events in the spike trace that are 
 /// lower than the highest spike in the baseline window.</summary>
 /// <param name="saveFolder">The folder where the traces shall be saved.</param>
 /// <param name="s2pTrace">The suite2p input, consisting of the fluorescence, the neuropil, the spike trace, and the iscell-information.</param>
 /// <returns>An array of spike traces consisting only of the spikes higher than the largest spike in their respective baseline window.</returns>
-let subtractBaselineSpikes saveFolder plane (s2pTraces: Suite2pTrace []) =
+let subtractBaselineSpikes windowSizes neuCoEff saveFolder plane (s2pTraces: Suite2pTrace []) =
     let path = if String.last saveFolder <> '\\' then saveFolder + @"\" else saveFolder
     s2pTraces
     |> Array.choosei (
