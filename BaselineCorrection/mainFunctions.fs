@@ -11,38 +11,7 @@ open AuxFunctions.IO
 /// <param name="trace">The trace which baseline shall be determined.</param>
 /// <returns>The mean of the baseline as the mean of the window with the smallest SD.</returns>
 let determineBaseline (windowSizes: int []) (trace: float []) =
-    if windowSizes = [||] then
-        let windowSizesCalc =
-            [|5 .. 500|]
-            |> Array.map (
-                fun winS ->
-                    async {
-                        // printfn "Calculating window size %i" winS
-                        return (
-                            Array.windowed winS trace
-                            |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
-                            |> Array.sortBy (fun (i,mean,sD) -> sD)
-                            |> Array.take 10
-                            |> Array.map (fun (i,mean,sD) -> mean)
-                            |> Seq.stDev
-                        )
-                    }
-            ) 
-            |> Async.Parallel 
-            |> Async.RunSynchronously
-        windowSizesCalc 
-        |> Array.mapi (fun i sD -> i + 5, sD)
-        |> Array.minBy snd
-        |> fun (winS,sD) ->
-            printfn "Optimal window size is %i with an SD of %f" winS sD
-            Array.windowed winS trace
-            |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
-            |> Array.sortBy (fun (i,mean,sD) -> sD)
-            |> Array.item 0
-            |> fun (fstFrame,baseline,sd) ->
-                printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
-                baseline
-    else
+    let determineBaselineFunction windowSizes trace = 
         let windowSizesCalc =
             windowSizes
             |> Array.map (
@@ -56,11 +25,11 @@ let determineBaseline (windowSizes: int []) (trace: float []) =
                             |> Array.take 10
                             |> Array.map (fun (i,mean,sD) -> mean)
                             |> Seq.stDev
-                        )
-                    }
-            ) 
-            |> Async.Parallel 
-            |> Async.RunSynchronously
+                            )
+                        }
+                ) 
+                |> Async.Parallel 
+                |> Async.RunSynchronously
         windowSizesCalc 
         |> Array.mapi (fun i sD -> i + 5, sD)
         |> Array.minBy snd
@@ -72,7 +41,9 @@ let determineBaseline (windowSizes: int []) (trace: float []) =
             |> Array.item 0
             |> fun (fstFrame,baseline,sd) ->
                 printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
-                baseline
+                fstFrame, fstFrame + winS, baseline
+    if windowSizes = [||] then determineBaselineFunction [|5 .. 500|] trace
+    else determineBaselineFunction windowSizes trace
 
 /// <summary>Takes an array of suite2p trace, determines for each trace a window which resembles the baseline of the fluorescence trace, and subtracts all events in the spike trace that are 
 /// lower than the highest spike in the baseline window.</summary>
@@ -98,37 +69,38 @@ let subtractBaselineSpikes windowSizes neuCoEff saveFolder plane (s2pTraces: Sui
                                     sprintf "Old index (zero-based)\tOld index\tNew index (zero-based)\tNew index\n%i\t%i\t%i\t%i" iO (iO + 1) iN (iN + 1) 
                                 else sprintf "%i\t%i\t%i\t%i" iO (iO + 1) iN  (iN + 1)
                             )
-                    let baselineFrame =
-                        let windowSizes =
-                            [|5 .. 500|]
-                            |> Array.map (
-                                fun winS ->
-                                    async {
-                                        // printfn "Calculating window size %i" winS
-                                        return (
-                                            Array.windowed winS s2pTrace.FluorescenceTrace
-                                            |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
-                                            |> Array.sortBy (fun (i,mean,sD) -> sD)
-                                            |> Array.truncate 10
-                                            |> Array.map (fun (i,mean,sD) -> mean)
-                                            |> Seq.stDev
-                                        )
-                                    }
-                            ) 
-                            |> Async.Parallel 
-                            |> Async.RunSynchronously
-                        windowSizes 
-                        |> Array.mapi (fun i sD -> i + 5, sD) 
-                        |> Array.minBy snd
-                        |> fun (winS,sD) ->
-                            printfn "Optimal window size is %i with an SD of %f" winS sD
-                            Array.windowed winS s2pTrace.FluorescenceTrace
-                            |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
-                            |> Array.sortBy (fun (i,mean,sD) -> sD)
-                            |> Array.item 0
-                            |> fun (fstFrame,baseline,sd) ->
-                                printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
-                                fstFrame, (fstFrame + winS)
+                    //let baselineFrame =
+                    //    let windowSizes =
+                    //        [|5 .. 500|]
+                    //        |> Array.map (
+                    //            fun winS ->
+                    //                async {
+                    //                    // printfn "Calculating window size %i" winS
+                    //                    return (
+                    //                        Array.windowed winS s2pTrace.FluorescenceTrace
+                    //                        |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
+                    //                        |> Array.sortBy (fun (i,mean,sD) -> sD)
+                    //                        |> Array.truncate 10
+                    //                        |> Array.map (fun (i,mean,sD) -> mean)
+                    //                        |> Seq.stDev
+                    //                    )
+                    //                }
+                    //        ) 
+                    //        |> Async.Parallel 
+                    //        |> Async.RunSynchronously
+                    //    windowSizes 
+                    //    |> Array.mapi (fun i sD -> i + 5, sD) 
+                    //    |> Array.minBy snd
+                    //    |> fun (winS,sD) ->
+                    //        printfn "Optimal window size is %i with an SD of %f" winS sD
+                    //        Array.windowed winS s2pTrace.FluorescenceTrace
+                    //        |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
+                    //        |> Array.sortBy (fun (i,mean,sD) -> sD)
+                    //        |> Array.item 0
+                    //        |> fun (fstFrame,baseline,sd) ->
+                    //            printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
+                    //            fstFrame, (fstFrame + winS)
+                    let baselineFrame = determineBaseline windowSizes s2pTrace.FluorescenceTrace
                     let filterle = Array.max s2pTrace.SpikeTrace.[fst baselineFrame .. snd baselineFrame - 1]
                     printfn "Highest baseline peak is %f" filterle
                     Array.map (fun v -> if v > filterle then v else 0.) s2pTrace.SpikeTrace
