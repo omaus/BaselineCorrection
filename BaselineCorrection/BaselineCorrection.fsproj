@@ -9,6 +9,8 @@
     <Compile Include="auxFunctions.fs" />
     <Compile Include="mainFunctions.fs" />
     <Compile Include="Program.fs" />
+    <None Include="testing.fsx" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

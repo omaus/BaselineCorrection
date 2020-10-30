@@ -101,7 +101,7 @@ let subtractBaselineSpikes windowSizes neuCoEff saveFolder plane (s2pTraces: Sui
                     //            printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
                     //            fstFrame, (fstFrame + winS)
                     let baselineFrame = determineBaseline windowSizes s2pTrace.FluorescenceTrace
-                    let filterle = Array.max s2pTrace.SpikeTrace.[fst baselineFrame .. snd baselineFrame - 1]
+                    let filterle = Array.max s2pTrace.SpikeTrace.[fstOf3 baselineFrame .. sndOf3 baselineFrame - 1]
                     printfn "Highest baseline peak is %f" filterle
                     Array.map (fun v -> if v > filterle then v else 0.) s2pTrace.SpikeTrace
                 )
@@ -132,7 +132,7 @@ let correctBaselinePipeline overwrite pathToFolder =
                         printfn "Processing plane %i\n" i
                         stoppy.Restart ()
                         IO.constructSuite2pTraces plane
-                        |> subtractBaselineSpikes path i
+                        //|> subtractBaselineSpikes path i
                         stoppy.Stop ()
                         let daytime = System.DateTime.Now
                         printfn "Time needed: %i h, %i m, %i s. Date: %i.%i.%i, %i:%i:%i" stoppy.Elapsed.Hours stoppy.Elapsed.Minutes stoppy.Elapsed.Seconds daytime.Day daytime.Month daytime.Year daytime.Hour daytime.Minute daytime.Second
@@ -147,7 +147,7 @@ let correctBaselinePipeline overwrite pathToFolder =
                             printfn "Processing plane %i\n" i
                             stoppy.Restart ()
                             IO.constructSuite2pTraces plane
-                            |> subtractBaselineSpikes path i
+                            //|> subtractBaselineSpikes path i
                             stoppy.Stop ()
                             printfn "Time needed: %i h, %i m, %i s." stoppy.Elapsed.Hours stoppy.Elapsed.Minutes stoppy.Elapsed.Seconds
                     )

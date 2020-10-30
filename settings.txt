@@ -1,0 +1,3 @@
+overwrite: false
+neuCoeff: 0.7
+windowSizes: 10 .. 100

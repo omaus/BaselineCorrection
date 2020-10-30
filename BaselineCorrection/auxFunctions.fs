@@ -139,9 +139,37 @@ module BasicFunction =
     let array collec = Array.ofSeq collec
     /// Creates a list of any given collection.
     let list collec = List.ofSeq collec
+    /// Takes the first and the second value of a triple.
+    let inline fstSnd (x,y,z) = x, y
+    /// Takes the first value of a triple.
+    let inline fstOf3 (x,y,z) = x
+    /// Takes the second value of a triple.
+    let inline sndOf3 (x,y,z) = y
+    /// Takes the third value of a triple.
+    let inline trd (x,y,z) = z
+    /// Takes the first value of a quadruple.
+    let inline fstOf4 (x,y,z,a) = x
+    /// Takes the second value of a quadruple.
+    let inline sndOf4 (x,y,z,a) = y
+    /// Takes the third value of a quadruple.
+    let inline trdOf4 (x,y,z,a) = z
+    /// Takes the fourth value of a quadruple.
+    let inline frt (x,y,z,a) = a
 
 
 module IO =
+
+    /// Creates settings file if not present.
+    let checkForSettingsFile =
+        System.IO.Directory.GetCurrentDirectory ()
+        |> fun s -> 
+            if System.IO.Directory.GetFiles (s, "settings.txt") = [||] then
+                let template = [|
+                    "[Sets overwriting existing files to true or false (default)]\noverwrite: false\n"; 
+                    "[Sets neuropil coefficient. Default is 0.7]\nneuCoeff: 0.7\n"; 
+                    "[Sets window sizes to look for ideal baseline. Default is empty, meaning that all window sizes between 5 and 500 are checked. Either a single size (e.g.: 30) or a range of sizes (e.g.: 5 .. 100) can be set]\nwindowSizes: "
+                |]
+                System.IO.File.WriteAllLines (s + @"\settings.txt", template)
     
     /// Browses the given folderPath and its subfolders and returns the paths to every suite2p-folder.
     let findSuite2pFolders folderPath =
