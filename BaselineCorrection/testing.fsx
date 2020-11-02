@@ -1,27 +1,19 @@
-﻿#r @"C:\Repos\omaus\BaselineCorrection\BaselineCorrection\bin\Debug\netcoreapp3.1\BaselineCorrection.dll"
-#r @"C:\Repos\omaus\BaselineCorrection\BaselineCorrection\bin\Debug\netcoreapp3.1\FSharpAux.dll"
+﻿//#r @"C:\Repos\omaus\BaselineCorrection\BaselineCorrection\bin\Debug\netcoreapp3.1\BaselineCorrection.dll"
+//#r @"C:\Repos\omaus\BaselineCorrection\BaselineCorrection\bin\Debug\netcoreapp3.1\FSharpAux.dll"
 
-open FSharpAux
-open AuxFunctions
+//open FSharpAux
+//open AuxFunctions
 
-let currentDic = @"C:\Repos\omaus\BaselineCorrection"
+//let checkForSettingsFile =
+//    //System.IO.Directory.GetCurrentDirectory ()
+//    @"C:\Repos\omaus\BaselineCorrection\BaselineCorrection\bin\Release\netcoreapp3.1\publish"
+//    |> fun s -> 
+//        if System.IO.Directory.GetFiles (s, "settings.txt") = [||] then
+//            let template = [|
+//                "[Sets overwriting existing files to true or false (default)]\noverwrite: false\n"; 
+//                "[Sets neuropil coefficient. Default is 0.7]\nneuCoeff: 0.7\n"; 
+//                "[Sets window sizes to look for ideal baseline. Default is empty, meaning that all window sizes between 5 and 500 are checked. Either a single size (e.g.: 30) or a range of sizes (e.g.: 5 .. 100) can be set]\nwindowSizes: "
+//            |]
+//            System.IO.File.WriteAllLines (s + @"\settings.txt", template)
 
-let overwrite, neuCoeff, windowSizes =
-    System.IO.File.ReadAllLines (currentDic + @"\settings.txt")
-    |> fun sArr ->
-        sArr 
-        |> Array.choose (fun s -> if String.contains "overwrite:" s then Some (String.splitS "overwrite: " s |> Array.item 1) else None) 
-        |> Array.item 0
-        |> fun s -> (if s = "true" then true else false),
-        sArr 
-        |> Array.choose (fun s -> if String.contains "neuCoeff:" s then Some (String.splitS "neuCoeff: " s |> Array.item 1) else None)
-        |> Array.item 0
-        |> float,
-        sArr 
-        |> Array.choose (fun s -> if String.contains "windowSizes:" s then Some (String.splitS "windowSizes: " s |> Array.item 1) else None)
-        |> Array.item 0
-        |> fun s -> 
-            if s = "" then [||]
-            elif String.contains ".." s then 
-                String.splitS " .. " s |> Array.map int |> fun iArr -> Array.init (iArr.[1] - iArr.[0] + 1) (fun i -> i + iArr.[0])
-            else int s |> fun i -> [|i|]
+//checkForSettingsFile

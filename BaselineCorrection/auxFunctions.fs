@@ -160,16 +160,16 @@ module BasicFunction =
 module IO =
 
     /// Creates settings file if not present.
-    let checkForSettingsFile =
-        System.IO.Directory.GetCurrentDirectory ()
-        |> fun s -> 
-            if System.IO.Directory.GetFiles (s, "settings.txt") = [||] then
-                let template = [|
-                    "[Sets overwriting existing files to true or false (default)]\noverwrite: false\n"; 
-                    "[Sets neuropil coefficient. Default is 0.7]\nneuCoeff: 0.7\n"; 
-                    "[Sets window sizes to look for ideal baseline. Default is empty, meaning that all window sizes between 5 and 500 are checked. Either a single size (e.g.: 30) or a range of sizes (e.g.: 5 .. 100) can be set]\nwindowSizes: "
-                |]
-                System.IO.File.WriteAllLines (s + @"\settings.txt", template)
+    let checkForSettingsFile folder =
+        if System.IO.Directory.GetFiles (folder, "settings.txt") = [||] then
+            printfn "No settings file found. Creating one via template"
+            let template = [|
+                "[Sets overwriting existing files to true or false (default)]\noverwrite: false\n"; 
+                "[Sets neuropil coefficient. Default is 0.7]\nneuCoeff: 0.7\n"; 
+                "[Sets window sizes to look for ideal baseline. Default is empty, meaning that all window sizes between 5 and 500 are checked. Either a single size (e.g.: 30) or a range of sizes (e.g.: 5 .. 100) can be set]\nwindowSizes: "
+            |]
+            System.IO.File.WriteAllLines (folder + @"\settings.txt", template)
+        else printfn "Settings file found"
     
     /// Browses the given folderPath and its subfolders and returns the paths to every suite2p-folder.
     let findSuite2pFolders folderPath =

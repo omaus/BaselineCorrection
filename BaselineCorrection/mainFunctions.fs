@@ -45,8 +45,7 @@ let determineBaseline (windowSizes: int []) (trace: float []) =
     if windowSizes = [||] then determineBaselineFunction [|5 .. 500|] trace
     else determineBaselineFunction windowSizes trace
 
-/// <summary>Takes an array of suite2p trace, determines for each trace a window which resembles the baseline of the fluorescence trace, and subtracts all events in the spike trace that are 
-/// lower than the highest spike in the baseline window.</summary>
+/// <summary>Takes an array of suite2p trace, determines for each trace a window which resembles the baseline of the fluorescence trace, and subtracts all events in the spike trace that are lower than the highest spike in the baseline window.</summary>
 /// <param name="saveFolder">The folder where the traces shall be saved.</param>
 /// <param name="s2pTrace">The suite2p input, consisting of the fluorescence, the neuropil, the spike trace, and the iscell-information.</param>
 /// <returns>An array of spike traces consisting only of the spikes higher than the largest spike in their respective baseline window.</returns>
@@ -69,38 +68,8 @@ let subtractBaselineSpikes windowSizes neuCoEff saveFolder plane (s2pTraces: Sui
                                     sprintf "Old index (zero-based)\tOld index\tNew index (zero-based)\tNew index\n%i\t%i\t%i\t%i" iO (iO + 1) iN (iN + 1) 
                                 else sprintf "%i\t%i\t%i\t%i" iO (iO + 1) iN  (iN + 1)
                             )
-                    //let baselineFrame =
-                    //    let windowSizes =
-                    //        [|5 .. 500|]
-                    //        |> Array.map (
-                    //            fun winS ->
-                    //                async {
-                    //                    // printfn "Calculating window size %i" winS
-                    //                    return (
-                    //                        Array.windowed winS s2pTrace.FluorescenceTrace
-                    //                        |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
-                    //                        |> Array.sortBy (fun (i,mean,sD) -> sD)
-                    //                        |> Array.truncate 10
-                    //                        |> Array.map (fun (i,mean,sD) -> mean)
-                    //                        |> Seq.stDev
-                    //                    )
-                    //                }
-                    //        ) 
-                    //        |> Async.Parallel 
-                    //        |> Async.RunSynchronously
-                    //    windowSizes 
-                    //    |> Array.mapi (fun i sD -> i + 5, sD) 
-                    //    |> Array.minBy snd
-                    //    |> fun (winS,sD) ->
-                    //        printfn "Optimal window size is %i with an SD of %f" winS sD
-                    //        Array.windowed winS s2pTrace.FluorescenceTrace
-                    //        |> Array.mapi (fun i win -> i, Seq.mean win, Seq.stDev win)
-                    //        |> Array.sortBy (fun (i,mean,sD) -> sD)
-                    //        |> Array.item 0
-                    //        |> fun (fstFrame,baseline,sd) ->
-                    //            printfn "Optimal window ranges from frame #%i to #%i, has an SD of %f and a mean (baseline) of %f" fstFrame (fstFrame + winS - 1) sd baseline
-                    //            fstFrame, (fstFrame + winS)
-                    let baselineFrame = determineBaseline windowSizes s2pTrace.FluorescenceTrace
+                    let noNeuropilTrace = (s2pTrace.FluorescenceTrace,s2pTrace.NeuropilTrace) ||> Array.map2 (fun vFluo vNeuropil -> vFluo - vNeuropil * neuCoEff)
+                    let baselineFrame = determineBaseline windowSizes noNeuropilTrace
                     let filterle = Array.max s2pTrace.SpikeTrace.[fstOf3 baselineFrame .. sndOf3 baselineFrame - 1]
                     printfn "Highest baseline peak is %f" filterle
                     Array.map (fun v -> if v > filterle then v else 0.) s2pTrace.SpikeTrace
@@ -112,8 +81,8 @@ let subtractBaselineSpikes windowSizes neuCoEff saveFolder plane (s2pTraces: Sui
         printfn "Writing to .tsv file in folder %s." saveFolder
         System.IO.File.WriteAllLines (path + "baselineCorrectedSpikeTraces_plane" + (string plane) + ".tsv", strArr)
 
-/// Browses through the given folder as well as through all subFolders, determines the baseline of the suite2pTraces and saves them. If overwrite is true, already processed folders get processed again.
-let correctBaselinePipeline overwrite pathToFolder =
+/// Browses through the given folder as well as through all subFolders, determines the baseline of the suite2pTraces and saves them. If overwrite is true, already processed folders get processed again. windowSizes determines the sizes of the windows to check for the most representative baseline. neuCoeff is the factor multiplied with the neuropil trace when subtracted from the raw fluorescence trace. If neuCoeff is 0, no neuropil trace subtraction will be performed.
+let correctBaselinePipeline overwrite windowSizes neuCoeff pathToFolder =
     let stoppy = System.Diagnostics.Stopwatch ()
     let daytime = System.DateTime
     stoppy.Start ()
@@ -132,7 +101,7 @@ let correctBaselinePipeline overwrite pathToFolder =
                         printfn "Processing plane %i\n" i
                         stoppy.Restart ()
                         IO.constructSuite2pTraces plane
-                        //|> subtractBaselineSpikes path i
+                        |> subtractBaselineSpikes windowSizes neuCoeff path i
                         stoppy.Stop ()
                         let daytime = System.DateTime.Now
                         printfn "Time needed: %i h, %i m, %i s. Date: %i.%i.%i, %i:%i:%i" stoppy.Elapsed.Hours stoppy.Elapsed.Minutes stoppy.Elapsed.Seconds daytime.Day daytime.Month daytime.Year daytime.Hour daytime.Minute daytime.Second
@@ -147,7 +116,7 @@ let correctBaselinePipeline overwrite pathToFolder =
                             printfn "Processing plane %i\n" i
                             stoppy.Restart ()
                             IO.constructSuite2pTraces plane
-                            //|> subtractBaselineSpikes path i
+                            |> subtractBaselineSpikes windowSizes neuCoeff path i
                             stoppy.Stop ()
                             printfn "Time needed: %i h, %i m, %i s." stoppy.Elapsed.Hours stoppy.Elapsed.Minutes stoppy.Elapsed.Seconds
                     )

@@ -8,7 +8,8 @@ let main argv =
     let currentDic = System.IO.Directory.GetCurrentDirectory ()
     let rec loop () =
         printfn "Checking for settings file"
-        IO.checkForSettingsFile
+        IO.checkForSettingsFile currentDic
+        System.Threading.Thread.Sleep 500
         printfn "Reading settings.txt"
         let overwrite, neuCoeff, windowSizes, windowSizes' =
             System.IO.File.ReadAllLines (currentDic + @"\settings.txt")
@@ -36,10 +37,10 @@ let main argv =
                 ov,nC,wS,wSraw
         printfn "Enter the path to the folder where the tool shall search for suite2p traces:"
         let folderPath = System.Console.ReadLine ()
-        printfn "\nInputs are:\n\nfolderPath: %s\noverwrite: %b\nneuCoeff: %f\nwindowSize(s): %s\nIs this correct? [y/n]" folderPath overwrite neuCoeff windowSizes'
+        printfn "\nInputs are:\n\nfolderPath: %s\noverwrite: %b\nneuCoeff: %f\nwindowSize(s): %s\n\nIs this correct? [y/n]" folderPath overwrite neuCoeff windowSizes'
         match String.allLowerCase (System.Console.ReadLine ()) with 
         | "y" -> 
-            BaselineCorrection.correctBaselinePipeline overwrite folderPath
+            BaselineCorrection.correctBaselinePipeline overwrite windowSizes neuCoeff folderPath
             printfn "\nPress any key to exit"
             ignore (System.Console.Read ())
             0 // return an integer exit code
