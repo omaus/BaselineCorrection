@@ -159,31 +159,63 @@ module BasicFunction =
 
 module IO =
 
+    let logReport running report folder =
+        let folder = if String.last folder = '\\' then folder else folder + "\\"
+        let startDate = System.DateTime.Now
+        let filename = 
+            if running then 
+                System.IO.Directory.GetFiles (folder, "log*")
+                |> Array.last
+                |> fun p -> p.[String.findIndexBack '\\' p + 1 ..]
+            else 
+                sprintf "log_%i_%i_%i_%i.%i.txt" startDate.Year startDate.Month startDate.Day startDate.Hour startDate.Minute
+        if not running then FSharpAux.IO.FileIO.writeStringToFile true (folder + filename) (sprintf "Log file for %i.%i.%i, %i:%i" startDate.Day startDate.Month startDate.Year startDate.Hour startDate.Minute)
+        FSharpAux.IO.FileIO.writeStringToFile true (folder + filename) report
+
     /// Creates settings file if not present.
     let checkForSettingsFile folder =
+        let currentDic = System.IO.Directory.GetCurrentDirectory ()
         if System.IO.Directory.GetFiles (folder, "settings.txt") = [||] then
-            printfn "No settings file found. Creating one via template"
+            let log1 = "No settings file found. Creating one via template"
+            printfn "%s" log1
+            logReport true log1 currentDic
             let template = [|
                 "[Sets overwriting existing files to true or false (default)]\noverwrite: false\n"; 
                 "[Sets neuropil coefficient. Default is 0.7]\nneuCoeff: 0.7\n"; 
                 "[Sets window sizes to look for ideal baseline. Default is empty, meaning that all window sizes between 5 and 500 are checked. Either a single size (e.g.: 30) or a range of sizes (e.g.: 5 .. 100) can be set]\nwindowSizes: "
             |]
             System.IO.File.WriteAllLines (folder + @"\settings.txt", template)
-        else printfn "Settings file found"
+        else 
+            let log2 = "Settings file found"
+            printfn "%s" log2
+            logReport true log2 currentDic
     
     /// Browses the given folderPath and its subfolders and returns the paths to every suite2p-folder.
     let findSuite2pFolders folderPath =
         let mutable (listOfPaths: string list) = []
+        let currentDic = System.IO.Directory.GetCurrentDirectory ()
         let rec checkSub folder =
-            printfn "\nAccessing folder %s" folder
+            let log1 = sprintf "\nAccessing folder %s" folder
+            printfn "%s" log1
+            logReport false log1 currentDic
             System.IO.Directory.GetDirectories folder
             |> fun subFolders ->
-                if subFolders.Length = 0 then printfn "No subFolders in folder %s" folder
+                if subFolders.Length = 0 then 
+                    let log2 = sprintf "No subFolders in folder %s" folder
+                    printfn "%s" log2
+                    logReport true log2 currentDic
                 else
-                    printfn "Accessing subFolders"
+                    let log3 = sprintf "Accessing subFolders"
+                    printfn "%s" log3
+                    logReport true log3 currentDic
                     Array.iter (
                         fun (subFolder:string) -> 
-                            if subFolder.[subFolder.Length - 7 ..] = "suite2p" then printfn "\nsuite2p-Folder found. Adding to list"; listOfPaths <- subFolder::listOfPaths
+                            if subFolder.[subFolder.Length - 7 ..] = "suite2p" then 
+                                printfn "\nsuite2p-Folder found. Adding to list"
+                                let log4 = sprintf "\nsuite2p-Folder found. Adding to list"
+                                printfn "%s" log4
+                                logReport true log4 currentDic
+                                listOfPaths <- subFolder::listOfPaths
                             checkSub subFolder
                     ) subFolders
         checkSub folderPath
